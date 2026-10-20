@@ -1,0 +1,64 @@
+# GPU Whisper endpoint for call_assist.
+#
+#   cd server && ./setup.sh && docker compose up -d
+#
+# The whisper container is never published; only the auth gateway is, and only
+# on the interfaces listed in .env (WHISPER_BIND). Keep it off 0.0.0.0 unless
+# you actually want it on the public internet.
+
+services:
+  whisper:
+    build:
+      context: .
+      args:
+        WHISPER_TAG: ${WHISPER_TAG:-v1.7.4}
+        CUDA_ARCH:   ${CUDA_ARCH:-89}
+    image: call-assist/whisper-cuda:${WHISPER_TAG:-v1.7.4}
+    container_name: call-assist-whisper
+    restart: unless-stopped
+    volumes:
+      - ./models:/models:ro
+    # whisper-server parses "--flag value", never "--flag=value".
+    command:
+      - --model
+      - /models/${WHISPER_MODEL:-ggml-large-v3-turbo.bin}
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --inference-path
+      - /v1/audio/transcriptions
+      - --threads
+      - "${WHISPER_THREADS:-4}"
+      - --language
+      - ${WHISPER_LANG:-ru}
+      - --flash-attn
+      - --convert
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 90s
+
+  gateway:
+    image: nginx:1.27-alpine
+    container_name: call-assist-gateway
+    restart: unless-stopped
+    depends_on:
+      whisper:
+        condition: service_healthy
+    ports:
+      - "${WHISPER_BIND:-127.0.0.1}:${WHISPER_PORT:-8910}:8080"
+    volumes:
+      - ./nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+    environment:
+      API_TOKEN: ${API_TOKEN:?set API_TOKEN in server/.env - run ./setup.sh}
+      NGINX_ENVSUBST_FILTER: "API_TOKEN"

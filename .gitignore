@@ -1,0 +1,10 @@
+build*/
+models/
+*.bin
+*.gguf
+*.exe
+*.obj
+*.o
+
+# prompts live here; .env.example is the committed template
+.env

@@ -1,0 +1,38 @@
+# Bearer-token gate in front of whisper-server, which has no auth of its own.
+# ${API_TOKEN} is substituted at container start (NGINX_ENVSUBST_FILTER pins it
+# to that one name so nginx's own $variables survive).
+
+# The map key is "Bearer <token>", which overflows the default 64-byte bucket.
+map_hash_bucket_size 256;
+
+map $http_authorization $ca_auth_ok {
+    default                 0;
+    "Bearer ${API_TOKEN}"   1;
+}
+
+server {
+    listen      8080;
+    server_name _;
+
+    client_max_body_size 64m;
+    default_type application/json;
+
+    location = /healthz {
+        access_log off;
+        return 200 "ok\n";
+    }
+
+    location = /v1/audio/transcriptions {
+        if ($ca_auth_ok = 0) {
+            return 401 '{"error":{"message":"invalid or missing API key"}}';
+        }
+        proxy_pass              http://whisper:8080/v1/audio/transcriptions;
+        proxy_request_buffering on;
+        proxy_read_timeout      300s;
+        proxy_send_timeout      300s;
+    }
+
+    location / {
+        return 404 '{"error":{"message":"not found"}}';
+    }
+}

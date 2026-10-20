@@ -1,0 +1,234 @@
+#include <windows.h>
+#include "resource.h"
+
+IDI_APPICON ICON "app.ico"
+1 RT_MANIFEST "app.manifest"
+
+/* ====================================================== main settings shell */
+IDD_SETTINGS DIALOGEX 0, 0, 500, 322
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "call_assist - Admin panel"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    CONTROL         "", IDC_TAB, "SysTabControl32", WS_TABSTOP, 6, 6, 488, 280
+    LTEXT           "", IDC_STATUSBAR, 8, 292, 330, 24
+    DEFPUSHBUTTON   "OK", IDOK, 348, 302, 46, 14
+    PUSHBUTTON      "Apply", IDC_APPLY, 398, 302, 46, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 448, 302, 46, 14
+END
+
+/* ============================================================ speech to text */
+IDD_TAB_STT DIALOGEX 0, 0, 476, 250
+STYLE DS_SETFONT | DS_CONTROL | WS_CHILD | WS_VISIBLE
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    GROUPBOX        "Engine", -1, 4, 2, 468, 44
+    CONTROL         "Local - whisper.cpp running inside this process", IDC_STT_LOCAL,
+                    "Button", BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP, 12, 15, 250, 10
+    CONTROL         "Remote - OpenAI-compatible /audio/transcriptions endpoint", IDC_STT_REMOTE,
+                    "Button", BS_AUTORADIOBUTTON, 12, 29, 250, 10
+
+    GROUPBOX        "Local model", -1, 4, 50, 468, 62
+    LTEXT           "Model file:", -1, 12, 65, 40, 9
+    EDITTEXT        IDC_WMODEL, 54, 63, 340, 13, ES_AUTOHSCROLL
+    PUSHBUTTON      "Browse...", IDC_WBROWSE, 398, 63, 66, 13
+    LTEXT           "Threads:", -1, 12, 84, 32, 9
+    EDITTEXT        IDC_WTHREADS, 46, 82, 30, 13, ES_NUMBER
+    CONTROL         "Use GPU when the build supports it", IDC_WGPU, "Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP, 86, 83, 160, 10
+    LTEXT           "", IDC_STT_HINT, 12, 98, 452, 9
+
+    GROUPBOX        "Remote endpoint", -1, 4, 116, 468, 62
+    LTEXT           "URL:", -1, 12, 131, 20, 9
+    EDITTEXT        IDC_STT_URL, 34, 129, 366, 13, ES_AUTOHSCROLL
+    PUSHBUTTON      "Test", IDC_STT_TEST, 404, 129, 60, 13
+    LTEXT           "API key:", -1, 12, 150, 32, 9
+    EDITTEXT        IDC_STT_KEY, 46, 148, 210, 13, ES_PASSWORD | ES_AUTOHSCROLL
+    LTEXT           "Model:", -1, 264, 150, 26, 9
+    EDITTEXT        IDC_STT_MODEL, 292, 148, 172, 13, ES_AUTOHSCROLL
+
+    GROUPBOX        "Language", -1, 4, 182, 468, 42
+    LTEXT           "Spoken language:", -1, 12, 198, 66, 9
+    COMBOBOX        IDC_LANG, 80, 196, 70, 160, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Translate to English", IDC_TRANSLATE, "Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP, 162, 197, 100, 10
+    LTEXT           "Applies to both engines. ""auto"" detects per utterance.", -1, 272, 198, 194, 9
+END
+
+/* ======================================================================= llm */
+IDD_TAB_LLM DIALOGEX 0, 0, 476, 250
+STYLE DS_SETFONT | DS_CONTROL | WS_CHILD | WS_VISIBLE
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    GROUPBOX        "OpenAI-compatible chat API", -1, 4, 2, 468, 76
+    LTEXT           "URL:", -1, 12, 17, 20, 9
+    EDITTEXT        IDC_LLM_URL, 34, 15, 362, 13, ES_AUTOHSCROLL
+    PUSHBUTTON      "Test", IDC_LLM_TEST, 400, 15, 64, 13
+    LTEXT           "API key:", -1, 12, 35, 32, 9
+    EDITTEXT        IDC_LLM_KEY, 46, 33, 200, 13, ES_PASSWORD | ES_AUTOHSCROLL
+    LTEXT           "Model:", -1, 254, 35, 26, 9
+    EDITTEXT        IDC_LLM_MODEL, 282, 33, 182, 13, ES_AUTOHSCROLL
+    LTEXT           "Temp:", -1, 12, 51, 24, 9
+    EDITTEXT        IDC_TEMP, 38, 49, 30, 13, ES_AUTOHSCROLL
+    LTEXT           "Max tokens:", -1, 76, 51, 44, 9
+    EDITTEXT        IDC_MAXTOK, 122, 49, 38, 13, ES_NUMBER
+    LTEXT           "Transcript context (s):", -1, 168, 51, 78, 9
+    EDITTEXT        IDC_CTXSEC, 248, 49, 38, 13, ES_NUMBER
+    CONTROL         "Stream tokens into the overlay", IDC_STREAM, "Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP, 296, 50, 168, 10
+    CONTROL         "Two-stage: answer first, details in a second request", IDC_TWO_STAGE,
+                    "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 12, 64, 240, 10
+    LTEXT           "Leave a box empty to omit it: no temperature, no max_tokens.",
+                    -1, 256, 64, 208, 9
+
+    GROUPBOX        "System prompt", -1, 4, 82, 468, 80
+    EDITTEXT        IDC_SYSPROMPT, 10, 94, 456, 62,
+                    ES_MULTILINE | ES_WANTRETURN | ES_AUTOVSCROLL | WS_VSCROLL | WS_TABSTOP
+
+    GROUPBOX        "User message template", -1, 4, 166, 468, 80
+    EDITTEXT        IDC_USERTPL, 10, 178, 456, 50,
+                    ES_MULTILINE | ES_WANTRETURN | ES_AUTOVSCROLL | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Placeholders: {transcript}   {last}   {time}", -1, 10, 232, 300, 9
+END
+
+/* ===================================================================== audio */
+IDD_TAB_AUDIO DIALOGEX 0, 0, 476, 250
+STYLE DS_SETFONT | DS_CONTROL | WS_CHILD | WS_VISIBLE
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    GROUPBOX        "Sources (summed into one 16 kHz mono stream)", -1, 4, 2, 468, 82
+    CONTROL         "Microphone", IDC_CAP_MIC, "Button", BS_AUTOCHECKBOX | WS_TABSTOP,
+                    12, 16, 60, 10
+    COMBOBOX        IDC_MIC_DEV, 76, 14, 310, 160, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Gain", -1, 392, 16, 18, 9
+    EDITTEXT        IDC_MIC_GAIN, 412, 14, 44, 13, ES_AUTOHSCROLL
+    CONTROL         "System audio", IDC_CAP_SYS, "Button", BS_AUTOCHECKBOX | WS_TABSTOP,
+                    12, 34, 60, 10
+    COMBOBOX        IDC_SYS_DEV, 76, 32, 310, 160, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Gain", -1, 392, 34, 18, 9
+    EDITTEXT        IDC_SYS_GAIN, 412, 32, 44, 13, ES_AUTOHSCROLL
+    LTEXT           "Input level:", -1, 12, 55, 42, 9
+    CONTROL         "", IDC_LEVEL, "msctls_progress32", WS_CHILD | WS_VISIBLE,
+                    56, 54, 322, 10
+    LTEXT           "", IDC_LEVEL_TXT, 384, 55, 80, 9
+    LTEXT           "", IDC_SRC_LEVELS, 56, 65, 408, 9
+
+    GROUPBOX        "Voice activity detection", -1, 4, 88, 468, 104
+    LTEXT           "Threshold (dBFS):", -1, 12, 105, 64, 9
+    CONTROL         "", IDC_VAD_TH, "msctls_trackbar32",
+                    TBS_HORZ | TBS_NOTICKS | WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+                    78, 102, 282, 18
+    LTEXT           "", IDC_VAD_TH_TXT, 366, 105, 60, 9
+    LTEXT           "End-of-speech silence (ms):", -1, 12, 128, 98, 9
+    EDITTEXT        IDC_VAD_SIL, 112, 126, 42, 13, ES_NUMBER
+    LTEXT           "Min speech (ms):", -1, 166, 128, 62, 9
+    EDITTEXT        IDC_VAD_MIN, 230, 126, 40, 13, ES_NUMBER
+    LTEXT           "Max segment (ms):", -1, 282, 128, 70, 9
+    EDITTEXT        IDC_VAD_MAX, 354, 126, 44, 13, ES_NUMBER
+    LTEXT           "Chunk continuous speech after (ms):", -1, 12, 146, 130, 9
+    EDITTEXT        IDC_VAD_SOFT, 144, 144, 44, 13, ES_NUMBER
+    LTEXT           "Lower = answers sooner, less context per chunk. This is the main source of lag.",
+                    -1, 194, 146, 270, 9
+    LTEXT           "Stay quiet and note the idle level, then set the threshold a few dB above it.",
+                    -1, 12, 166, 450, 9
+    LTEXT           "Switching sources or devices restarts audio capture on Apply.",
+                    -1, 12, 178, 450, 9
+END
+
+/* ================================================================== triggers */
+IDD_TAB_TRIGGER DIALOGEX 0, 0, 476, 250
+STYLE DS_SETFONT | DS_CONTROL | WS_CHILD | WS_VISIBLE
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    GROUPBOX        "Mode", -1, 4, 2, 468, 34
+    CONTROL         "Push to talk - the listen hotkey records; releasing it answers once",
+                    IDC_PTT, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 12, 15, 300, 10
+    LTEXT           "Off = keep a rolling transcript and answer as you go.", -1, 316, 15, 150, 9
+
+    GROUPBOX        "Automatic answers (continuous mode only)", -1, 4, 40, 468, 48
+    CONTROL         "Answer automatically when an utterance ends", IDC_AUTO, "Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP, 12, 54, 220, 10
+    LTEXT           "Minimum characters:", -1, 12, 72, 72, 9
+    EDITTEXT        IDC_AUTO_MIN, 88, 70, 38, 13, ES_NUMBER
+    LTEXT           "Cooldown (ms):", -1, 140, 72, 56, 9
+    EDITTEXT        IDC_AUTO_COOL, 198, 70, 42, 13, ES_NUMBER
+    CONTROL         "Only when it looks like a question", IDC_AUTO_Q, "Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP, 254, 71, 200, 10
+    GROUPBOX        "Global hotkeys", -1, 4, 92, 468, 118
+    LTEXT           "Answer now:", -1, 12, 108, 70, 9
+    CONTROL         "", IDC_HK_RESPOND, "msctls_hotkey32",
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP, 84, 106, 130, 13
+    LTEXT           "Show / hide overlay:", -1, 12, 128, 70, 9
+    CONTROL         "", IDC_HK_OVERLAY, "msctls_hotkey32",
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP, 84, 126, 130, 13
+    LTEXT           "Clear transcript:", -1, 12, 148, 70, 9
+    CONTROL         "", IDC_HK_CLEAR, "msctls_hotkey32",
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP, 84, 146, 130, 13
+
+    LTEXT           "Start / stop (same key):", -1, 228, 108, 80, 9
+    CONTROL         "", IDC_HK_LISTEN, "msctls_hotkey32",
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP, 312, 106, 130, 13
+    LTEXT           "Screenshot a region:", -1, 228, 128, 80, 9
+    CONTROL         "", IDC_HK_SNIP, "msctls_hotkey32",
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP, 312, 126, 130, 13
+    LTEXT           "Or a mouse button:", -1, 228, 148, 80, 9
+    COMBOBOX        IDC_MOUSE_BTN, 312, 146, 130, 100,
+                    CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+
+    LTEXT           "Scroll overlay up:", -1, 12, 168, 70, 9
+    CONTROL         "", IDC_HK_SCROLL_UP, "msctls_hotkey32",
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP, 84, 166, 130, 13
+    LTEXT           "Scroll overlay down:", -1, 228, 168, 80, 9
+    CONTROL         "", IDC_HK_SCROLL_DOWN, "msctls_hotkey32",
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP, 312, 166, 130, 13
+    LTEXT           "Next overlay pane:", -1, 12, 188, 70, 9
+    CONTROL         "", IDC_HK_PANE_NEXT, "msctls_hotkey32",
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP, 84, 186, 130, 13
+    LTEXT           "Move / resize overlay:", -1, 228, 188, 80, 9
+    CONTROL         "", IDC_HK_MOVE, "msctls_hotkey32",
+                    WS_CHILD | WS_VISIBLE | WS_TABSTOP, 312, 186, 130, 13
+
+    GROUPBOX        "Startup", -1, 4, 214, 468, 32
+    CONTROL         "Start recording / listening as soon as the app launches", IDC_START_LISTENING,
+                    "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 12, 228, 220, 10
+    LTEXT           "Off by default: the app boots idle and the listen hotkey starts it.",
+                    -1, 240, 228, 224, 9
+END
+
+/* =================================================================== overlay */
+IDD_TAB_OVERLAY DIALOGEX 0, 0, 476, 250
+STYLE DS_SETFONT | DS_CONTROL | WS_CHILD | WS_VISIBLE
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    GROUPBOX        "Appearance", -1, 4, 2, 468, 88
+    LTEXT           "Opacity:", -1, 12, 18, 34, 9
+    CONTROL         "", IDC_OPACITY, "msctls_trackbar32",
+                    TBS_HORZ | TBS_NOTICKS | WS_CHILD | WS_VISIBLE | WS_TABSTOP,
+                    48, 15, 246, 18
+    LTEXT           "", IDC_OPACITY_TXT, 300, 18, 50, 9
+    LTEXT           "Font size (pt):", -1, 12, 42, 50, 9
+    EDITTEXT        IDC_FONTSIZE, 64, 40, 32, 13, ES_NUMBER
+    PUSHBUTTON      "Background...", IDC_COL_BG, 116, 39, 78, 14
+    PUSHBUTTON      "Text...", IDC_COL_FG, 200, 39, 60, 14
+    PUSHBUTTON      "Accent...", IDC_COL_ACCENT, 266, 39, 60, 14
+    CONTROL         "Click-through (mouse passes through the overlay)", IDC_CLICKTHRU,
+                    "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 12, 60, 220, 10
+    CONTROL         "Show recent transcript at the bottom", IDC_SHOWTR, "Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP, 240, 60, 220, 10
+    CONTROL         "Exclude the overlay from screen capture and screen sharing",
+                    IDC_HIDECAP, "Button", BS_AUTOCHECKBOX | WS_TABSTOP, 12, 74, 300, 10
+
+    GROUPBOX        "Position and size", -1, 4, 96, 468, 62
+    LTEXT           "X:", -1, 12, 113, 8, 9
+    EDITTEXT        IDC_OVX, 22, 111, 40, 13, ES_AUTOHSCROLL
+    LTEXT           "Y:", -1, 70, 113, 8, 9
+    EDITTEXT        IDC_OVY, 80, 111, 40, 13, ES_AUTOHSCROLL
+    LTEXT           "W:", -1, 128, 113, 10, 9
+    EDITTEXT        IDC_OVW, 140, 111, 40, 13, ES_NUMBER
+    LTEXT           "H:", -1, 188, 113, 10, 9
+    EDITTEXT        IDC_OVH, 200, 111, 40, 13, ES_NUMBER
+    PUSHBUTTON      "Use current position", IDC_OV_GRAB, 254, 110, 106, 14
+    PUSHBUTTON      "Reset", IDC_OV_RESET, 366, 110, 60, 14
+    LTEXT           "Turn click-through off to drag the overlay; the bottom-right corner resizes it.",
+                    -1, 12, 136, 450, 9
+END
