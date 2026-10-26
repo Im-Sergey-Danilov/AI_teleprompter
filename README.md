@@ -381,3 +381,7 @@ both are in **Settings → Audio**.
 - Local Whisper runs on the CPU unless your whisper.cpp build has a GPU backend
   compiled in; the **Use GPU** checkbox only takes effect if it does.
 - The overlay renders plain text. Markdown from the model is shown verbatim.
+
+## License
+
+MIT - free to use, change and share, commercially or not. See [LICENSE](LICENSE).
