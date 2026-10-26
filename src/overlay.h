@@ -45,9 +45,9 @@ void  overlay_set_answer(overlay_t *o, const char *utf8);
 void  overlay_set_transcript(overlay_t *o, const char *utf8);
 
 /* Scroll the answer pane. notches > 0 scrolls back towards older text, < 0
- * forwards; 0 re-pins to the newest line. Answers can outrun the window, and
- * with click-through on the wheel never reaches us, so this is also driven by
- * a global hotkey. */
+ * forwards; 0 re-pins to the newest line. Answers can outrun the window. With
+ * click-through on the wheel never reaches us directly, so the mouse hook in
+ * main.c forwards it, and this is also driven by a global hotkey. */
 void  overlay_scroll(overlay_t *o, int notches);          /* the focused pane */
 void  overlay_set_pane(overlay_t *o, int pane, const char *utf8);
 void  overlay_clear_panes(overlay_t *o);

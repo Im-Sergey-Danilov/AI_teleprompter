@@ -144,12 +144,14 @@ split on them; if it ignores the format, everything lands in **ANSWER** rather
 than disappearing. Reasoning models that stream a `<think>` scratchpad as
 ordinary content have it stripped before it reaches the panes.
 
-Scroll with `Ctrl+Alt+Up` / `Ctrl+Alt+Down`; `Ctrl+Alt+Right` moves the focus,
-and the focused pane is the one with the bright title and thumb. These work
-regardless of click-through, which is the point: a click-through window never
-receives the wheel, so with the default settings the mouse scrolls whatever is
-*behind* the overlay instead. The wheel does work over a pane once click-through
-is off.
+Hover over a pane and turn the mouse wheel to scroll it, even with
+click-through on: a low-level mouse hook catches the wheel over the panes and
+hands it to the overlay, so it does not scroll whatever is *behind* it. Clicks
+still pass through, and the wheel anywhere else on screen is left alone.
+
+Without the mouse, scroll with `Ctrl+Alt+Up` / `Ctrl+Alt+Down`; `Ctrl+Alt+Right`
+moves the focus, and the focused pane is the one with the bright title and
+thumb.
 
 Panes hold at their **first** line. Text that arrives while you are reading grows
 out of sight below rather than dragging your eyes down with it, so nothing moves

@@ -130,6 +130,10 @@ static int register_hotkeys(const config_t *c, char *msg, size_t cap)
  * RegisterHotKey cannot see mouse buttons, so a bound side button needs a
  * low-level hook. Only the bound button is swallowed; everything else passes
  * through untouched.
+ *
+ * The same hook gives the overlay its wheel: a click-through window never
+ * receives WM_MOUSEWHEEL, so a wheel turn over one of its panes is taken here
+ * and forwarded to it instead of scrolling whatever is underneath.
  */
 static HHOOK g_mouse_hook;
 static volatile LONG g_mouse_btn;      /* 0 none, 1 middle, 2 X1, 3 X2 */
@@ -156,23 +160,44 @@ static LRESULT CALLBACK mouse_proc(int code, WPARAM wp, LPARAM lp)
             }
             if (up && InterlockedExchange(&g_mouse_down, 0)) return 1;
         }
+
+        if (wp == WM_MOUSEWHEEL && g.ovl && overlay_is_visible(g.ovl)) {
+            RECT r;
+            HWND ovl = overlay_hwnd(g.ovl);
+            GetWindowRect(ovl, &r);
+            if (PtInRect(&r, m->pt) && overlay_pane_at(g.ovl, m->pt) >= 0) {
+                /* Same shape as a real WM_MOUSEWHEEL: delta in the high word
+                 * of wParam, screen coordinates in lParam. */
+                PostMessageW(ovl, WM_MOUSEWHEEL,
+                             MAKEWPARAM(0, HIWORD(m->mouseData)),
+                             MAKELPARAM(m->pt.x, m->pt.y));
+                return 1;
+            }
+        }
     }
     return CallNextHookEx(NULL, code, wp, lp);
 }
 
-static void apply_mouse_binding(int button)
+/* The hook stays in for the whole run so the overlay always gets its wheel;
+ * the button binding only changes which button it swallows. */
+static void install_mouse_hook(int on)
 {
-    InterlockedExchange(&g_mouse_btn, button);
-    if (button && !g_mouse_hook) {
+    if (on && !g_mouse_hook) {
         g_mouse_hook = SetWindowsHookExW(WH_MOUSE_LL, mouse_proc, g.inst, 0);
         if (!g_mouse_hook) LOGW("could not install the mouse hook (%lu)",
                                 (unsigned long)GetLastError());
-        else LOGI("mouse trigger bound to button %d", button);
-    } else if (!button && g_mouse_hook) {
+    } else if (!on && g_mouse_hook) {
         UnhookWindowsHookEx(g_mouse_hook);
         g_mouse_hook = NULL;
-        LOGI("mouse trigger unbound");
     }
+}
+
+static void apply_mouse_binding(int button)
+{
+    LONG prev = InterlockedExchange(&g_mouse_btn, button);
+    install_mouse_hook(1);
+    if (button && button != prev) LOGI("mouse trigger bound to button %d", button);
+    else if (!button && prev)     LOGI("mouse trigger unbound");
 }
 
 /* ---------------------------------------------------------------- overlay UI */
@@ -985,8 +1010,8 @@ static LRESULT CALLBACK main_proc(HWND h, UINT msg, WPARAM wp, LPARAM lp)
         case HK_CLEAR:   app_clear_transcript(); break;
         case HK_LISTEN:  app_set_listening(!app_listening()); break;
         case HK_SNIP:    app_snip_and_ask(); break;
-        /* The overlay is click-through, so the wheel never reaches it - these
-         * are the only way to read back a long answer. */
+        /* The wheel over a pane works too (see mouse_proc); these cover the
+         * case where the mouse is busy elsewhere. */
         case HK_SCROLL_UP:   overlay_scroll(g.ovl,  1); break;
         case HK_SCROLL_DOWN: overlay_scroll(g.ovl, -1); break;
         case HK_PANE_NEXT:   overlay_focus_next(g.ovl); break;
@@ -1137,6 +1162,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE prev, LPWSTR cmdline, int show)
 
     unregister_hotkeys();
     apply_mouse_binding(0);
+    install_mouse_hook(0);
     qa_clear();
     free(g_pending_question);
     free(g.stage1_answer);
